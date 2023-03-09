@@ -1,5 +1,8 @@
+[![Paper](https://img.shields.io/badge/paper-arXiv%3A2303.04614-B31B1B.svg)](https://arxiv.org/abs/2303.04614)
+
 # Densely Connected G-Invariant Deep Neural Networks with Signed Permutation Representations
 Devanshu Agrawal & James Ostrowski
+[arXiv:2303.04614](https://arxiv.org/abs/2303.04614)
 
 ### Abstract
 
@@ -21,7 +24,7 @@ finding that the inclusion of signed perm-reps significantly boosts predictive p
 
 ### Description
 
-This repository includes code and scripts to reproduce the results presented in the associated paper.
+This repository includes code and scripts to reproduce the results presented in the [associated paper](https://arxiv.org/abs/2303.04614).
 
 
 ### Requirements
