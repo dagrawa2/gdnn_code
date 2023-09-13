@@ -1,3 +1,5 @@
+"""Utility functions for generating spherical meshes. Obtained from the project: https://github.com/maxjiang93/ugscnn"""
+
 import numpy as np
 import igl
 import scipy.sparse as sparse

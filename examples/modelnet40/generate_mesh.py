@@ -1,3 +1,5 @@
+"""Generate spherical meshes of various resolutions. Adapted from https://github.com/maxjiang93/ugscnn"""
+
 from gdnn.icosahedron import export_spheres
 
 print("Generating spherical meshes . . . ")

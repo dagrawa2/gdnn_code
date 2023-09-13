@@ -5,6 +5,8 @@ from gappy import gap
 @gap.gap_function
 def group_from_generators(generators):
 	"""
+	# Build permutation group given a list of generators. 
+	# Each generator is a list of the images of 1, . . . , n under a permutation.
 	function(generators)
 	local G;
 	generators := List(generators, PermList);
@@ -17,6 +19,7 @@ def group_from_generators(generators):
 @gap.gap_function
 def subgroup_pairs_HK(G, indices):
 	"""
+	# Get signed perm-irreps rho_HK of G where the index of H in G is in indices.
 	function(G, indices)
 	local H, Hs, K, Ks, K_classes, NH, NK, out;
 	out := [];
@@ -39,10 +42,12 @@ def subgroup_pairs_HK(G, indices):
 @gap.gap_function
 def theta(G, H, K, J):
 	"""
+	# Computes the stabilizer subgroup theta(H, K, J) as described in the associated paper.
 	function(G, H, K, J)
 	local sortfunc, actfunc, double_cosets, h, omega, x, xs, S;
 
 	sortfunc := function(omega)
+		# sorts each set of cosets in omega to standardize it
 		local w;
 		for w in omega do
 			Sort(w);
@@ -51,6 +56,7 @@ def theta(G, H, K, J):
 	end;
 
 	actfunc := function(omega, g)
+		# act on each set of cosets in omega by g
 		local omega_g;
 		omega_g := sortfunc( List(omega, w->List(w, x->CanonicalRightCosetElement(J, x*g))) );
 		return omega_g;
@@ -79,6 +85,7 @@ def theta(G, H, K, J):
 @gap.gap_function
 def permgroup_decomposition(G, Gamma, degree):
 	"""
+	# Decompose the rep Gamma (where degree is its degree) into ordinary perm-irreps of G.
 	function(G, Gamma, degree)
 	local g, hom, J, os, out, perm, perms, perms_g, pnts, post_stabilizers, transversal;
 
@@ -120,6 +127,7 @@ def permgroup_decomposition(G, Gamma, degree):
 @gap.gap_function
 def subgroup_generators(G, H):
 	"""
+	# Get a generating set of a subgroup H in terms of the generators of group G.
 	function(G, H)
 	local generators;
 	generators := List(GeneratorsOfGroup(H), g->Factorization(G, g));
@@ -129,6 +137,17 @@ def subgroup_generators(G, H):
 
 
 def subgroup_generators_str(G, H, generator_names):
+	"""
+	Get a generating set of a subgroup of H of G in terms of the generators of G.
+
+	Args:
+		G (gap.Group): Group.
+		H (gap.Group): Subgroup.
+		generator_names (list): List of names (str) of generators of G.
+
+	Returns:
+		Generating set as a string.
+	"""
 	generators = [g.__repr__() for g in subgroup_generators(G, H).python()]
 	out = "["+", ".join(generators)+"]"
 	for (i, name) in enumerate(generator_names, start=1):
@@ -139,6 +158,8 @@ def subgroup_generators_str(G, H, generator_names):
 @gap.gap_function
 def weight_pattern_J(G, H, K, J):
 	"""
+	# Weightsharing pattern for a matrix whose output transforms by rho_HK 
+	# when its input transforms by pi_J.
 	function(G, H, K, J)
 	local color, colors, coset_rep_sets, coset_reps, double_cosets, h, i, muls, pattern, pair, pairs, perm, positions, positions_h, transversal_H, transversal_J, x, xs;
 
@@ -183,7 +204,22 @@ def weight_pattern_J(G, H, K, J):
 
 
 def weight_pattern(G, H, K, Js):
+	"""Compute weightsharing pattern of an equivariant matrix.
+
+	If the input transforms by ordinary perm-irreps corresponding to stabilizer subgroups Js, 
+	then the output transforms by the signed perm-irrep rho_HK.
+
+	Args:
+		G (gap.Group): Group.
+		H (gap.Group): Subgroup.
+		K (gap.Group): Subgroup of H of index 1-2.
+		Js (list): List of subgroups (gap.Group objects) defining the input ordinary perm-irreps.
+
+	Returns:
+		The weightsharing pattern as an np.ndarray object.
+	"""
 	patterns = [np.array(weight_pattern_J(G, H, K, J).python()) for J in Js]
+	# ensure unique indices per layer before concatenating patterns
 	shifted = []
 	for pattern in patterns:
 		if len(shifted) == 0:
@@ -195,11 +231,19 @@ def weight_pattern(G, H, K, Js):
 
 
 class SubgroupPairsHK(object):
+	"""Class to handle signed perm-irreps rho_HK of group G."""
 
 	def __init__(self, G, indices):
+		"""Class constructor.
+
+		Args:
+			G (gap.Group): Group.
+			indices (list): Subgroup indexes of the reps rho_HK.
+		"""
 		self.subgroup_pairs = subgroup_pairs_HK(G, indices)
 
 	def HKs(self):
+		"""Enumerates pairs (H, K) defining the signed perm-irreps rho_HK."""
 		for HK in self.subgroup_pairs:
 			H = HK["H"]
 			Ks = HK["Ks"]
@@ -207,11 +251,13 @@ class SubgroupPairsHK(object):
 				yield (H, K)
 
 	def Hs(self):
+		"""Enumerates just the subgroups H."""
 		subgroups = [HK["H"] for HK in self.subgroup_pairs]
 		for H in subgroups:
 			yield H
 
 	def Ks(self):
+		"""Enumerates just the subgroups K."""
 		for HK in self.subgroup_pairs:
 			H = HK["H"]
 			Ks = HK["Ks"]

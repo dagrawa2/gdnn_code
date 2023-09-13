@@ -1,42 +1,92 @@
+"""Various permutation groups."""
+
 import functools
 import numpy as np
 
 
 def direct_product(G, H):
+	"""Direct product of groups G and H.
+
+	Suppose G and H act on [1, . . . , m] and [1, . . . , n] respectively. 
+	Then the direct product GxH acts on [1, . . . , m+n], 
+	where G acts on the first m elements, and H on the last n elements.
+
+	Args:
+		G (list): List of generators of the first group, 
+			where each element is (generator name, permutation); 
+			e.g., as returned by Alternating, Cyclic, etc.
+		H (list): List of generators of the second group.
+
+	Returns:
+		List of group generators given as (name, permutation) of the direct product.
+	"""
+	# get separate lists of generator names and of generator permutations
 	names_G, G = zip(*G)
 	names_G, G = list(names_G), list(G)
 	names_H, H = zip(*H)
 	names_H, H = list(names_H), list(H)
+	# stack generators as rows of an array
 	G = np.array(G)
 	H = np.array(H)
+	# trivial generators to be appended to generators of G
 	xtrivial = np.tile( np.arange(H.shape[1])[None,:] + G.shape[1]+1, [G.shape[0], 1])
+	# trivial generators to be prepended to generators of H
 	trivialx = np.tile( np.arange(G.shape[1])[None,:]+1, [H.shape[0], 1])
+	# build generators of GxH
 	G = np.concatenate([G, xtrivial], 1)
 	H = np.concatenate([trivialx, H+trivialx.shape[1]], 1)
 	GxH = np.concatenate([G, H], 0)
 	generators = GxH.tolist()
+	# gather generator names
 	names = names_G + names_H
 	return list( zip(names, generators) )
 
-def group(group):
-	if "x" not in group:
-		letter, degree = tuple(group.split("_"))
+def group(group_str):
+	"""Constructs a group (in terms of a generating set) given a group name.
+
+	Example: "C_2xD_3" gives the generators of the direct product of the cyclic group C_2 and the dihedral group D_3.
+
+	Args:
+		group_str (str): Name of the group.
+
+	Returns:
+		List of group generators given as (name, permutation), 
+		where name is a string and permutation is the list of images of 1, . . . , n under the generator.
+	"""
+	if "x" not in group_str:  # no direct products
+		letter, degree = tuple(group_str.split("_"))  # e.g., C_2 -> C, 2
 		degree = int(degree)
+		# construct group using dict of shorthand group names
 		generators = group_dict[letter+"_n"](degree)
 		return generators
-	factors = group.split("x")
+	# otherwise split group name across direct products
+	factors = group_str.split("x")
+	# process each factor group in the product
 	factor_generators = []
 	for (i, factor) in enumerate(factors, start=1):
 		letter, degree = tuple(factor.split("_"))
 		degree = int(degree)
+		# use index i to give generators unique names
 		generators = group_dict[letter+"_n"](degree)
 		generators = [(f"{n}_{i:d}", g) for (n, g) in generators]
 		factor_generators.append(generators)
+	# build direct product
 	generators = functools.reduce(direct_product, factor_generators)
 	return generators
 
 
 def alternating(n):
+	"""Alternating group A_n of even permutations on [1, . . . , n].
+
+	We take the set of all 3-cycles of the form (1, 2, k) as the generating set.
+
+	Args:
+		n (int): Degree of the group.
+
+	Returns:
+		List of group generators given as (name, permutation), 
+		where name is a string and permutation is the list of images of 1, . . . , n under the generator.
+	"""
 	gens = []
 	for (i, j) in enumerate(range(3, n+1), start=1):
 		gen = list(range(1, n+1))
@@ -47,11 +97,32 @@ def alternating(n):
 	return gens
 
 def cyclic(n):
+	"""Cyclic group C_n with one generator.
+
+	Args:
+		n (int): Degree of the group.
+
+	Returns:
+		List of group generators given as (name, permutation), 
+		where name is a string and permutation is the list of images of 1, . . . , n under the generator.
+	"""
 	rho = list(range(2, n+2))
 	rho[-1] = 1
 	return [("r", rho)]
 
 def dihedral(n):
+	"""Dihedral group D_n acting on [1, . . . , n].
+
+	The permutation rho = [2, 3, . . . , n, 1] generates the cyclic translations, 
+	and tau = [n, n-1, . . . , 1] is a reversal.
+
+	Args:
+		n (int): Degree of the group.
+
+	Returns:
+		List of group generators given as (name, permutation), 
+		where name is a string and permutation is the list of images of 1, . . . , n under the generator.
+	"""
 	rho = list(range(2, n+2))
 	rho[-1] = 1
 	tau = list(range(1, n+1))
@@ -59,6 +130,20 @@ def dihedral(n):
 	return [("r", rho), ("t", tau)]
 
 def quaternian(n):
+	"""Quaternian group Q_n.
+
+	Currently only Q_8 is implemented with representation given by the generators
+		i = [3, 4, 2, 1, 7, 8, 6, 5]
+		j = [5, 6, 8, 7, 2, 1, 3, 4]
+		k = [7, 8, 5, 6, 4, 3, 2, 1]
+
+	Args:
+		n (int): Degree of the group.
+
+	Returns:
+		List of group generators given as (name, permutation), 
+		where name is a string and permutation is the list of images of 1, . . . , n under the generator.
+	"""
 	assert n==8, "The quaternian group currently supports only order 8."
 	i = [3, 4, 2, 1, 7, 8, 6, 5]
 	j = [5, 6, 8, 7, 2, 1, 3, 4]
@@ -66,6 +151,17 @@ def quaternian(n):
 	return [("i", i), ("j", j), ("k", k)]
 
 def symmetric(n):
+	"""Symmetric group S_n of all permutations on [1, . . . n].
+
+	It is generated by one cyclic translation and a 3-cycle.
+
+	Args:
+		n (int): Degree of the group.
+
+	Returns:
+		List of group generators given as (name, permutation), 
+		where name is a string and permutation is the list of images of 1, . . . , n under the generator.
+	"""
 	rho = list(range(2, n+2))
 	rho[-1] = 1
 	tau = list(range(1, n+1))
@@ -74,6 +170,7 @@ def symmetric(n):
 	return [("r", rho), ("t", tau)]
 
 
+# shorthand
 group_dict = {
 	"A_n": alternating, 
 	"C_n": cyclic, 

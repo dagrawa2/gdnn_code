@@ -1,3 +1,5 @@
+"""Preprocessing script for ModelNet40 adapted from https://github.com/maxjiang93/ugscnn"""
+
 import os
 import pickle
 import numpy as np
@@ -5,8 +7,6 @@ import torch
 import torchvision
 import trimesh
 
-
-###
 
 def rotmat(a, b, c, hom_coord=False):  # apply to mesh using mesh.apply_transform(rotmat(a,b,c, True))
 	"""
@@ -34,7 +34,6 @@ def rotmat(a, b, c, hom_coord=False):  # apply to mesh using mesh.apply_transfor
 
 
 def render_model(mesh, sgrid):
-
 	# Cast rays
 	# triangle_indices = mesh.ray.intersects_first(ray_origins=sgrid, ray_directions=-sgrid)
 	index_tri, index_ray, loc = mesh.ray.intersects_id(
@@ -86,10 +85,13 @@ def rnd_rot():
 	return rot
 
 
+
 class ToMesh:
+
 	def __init__(self, random_rotations=False, random_translation=0):
 		self.rot = random_rotations
 		self.tr = random_translation
+
 
 	def __call__(self, path):
 		mesh = trimesh.load_mesh(path)
@@ -122,11 +124,14 @@ class ToMesh:
 
 		return mesh
 
+
 	def __repr__(self):
 		return self.__class__.__name__ + '(rotation={0}, translation={1})'.format(self.rot, self.tr)
 
 
+
 class ProjectOnSphere:
+
 	def __init__(self, meshfile, dataset, normalize=True):
 		self.meshfile = meshfile
 		pkl = pickle.load(open(meshfile, "rb"))
@@ -185,11 +190,11 @@ class ProjectOnSphere:
 
 		return im
 
+
 	def __repr__(self):
 		return self.__class__.__name__ + '(level={0}, points={1})'.format(self.level, self.pts)
 
 
-###
 
 class CacheNPY(object):
 
@@ -197,11 +202,13 @@ class CacheNPY(object):
 		self.transform = transform
 		self.prefix = prefix
 
+
 	def check_trans(self, file_path):
 		try:
 			return self.transform(file_path)
 		except:
 			raise
+
 
 	def __call__(self, file_path):
 		head, tail = os.path.split(file_path)
@@ -213,41 +220,62 @@ class CacheNPY(object):
 			np.save(npy_path, img)
 
 
-def preprocess_data(sp_mesh_dir, sp_mesh_level, data_dir, dataset, partition):
-	sp_mesh_file = os.path.join(sp_mesh_dir, f"icosphere_{sp_mesh_level}.pkl")
 
+### key functions used in main body
+
+def preprocess_data(sp_mesh_dir, sp_mesh_level, data_dir, partition):
+	"""Preprocess each ModelNet40 file and save in .npy format.
+
+	Args:
+		sp_mesh_dir (str): Directory containing spherical meshes generated from "generate_mesh.py".
+		sp_mesh_level (int): Resolution level of spherical mesh.
+		data_dir (str): Root directory of raw ModelNet40 data files.
+		partition (str): Either "train" or "test" split.
+	"""
+	sp_mesh_file = os.path.join(sp_mesh_dir, f"icosphere_{sp_mesh_level}.pkl")  # spherical mesh
+
+	# transform that will do the preprocessing per file
 	transform = CacheNPY(prefix=f"sp{sp_mesh_level}_", transform=torchvision.transforms.Compose(
 		[
 			ToMesh(random_rotations=False, random_translation=0),
-			ProjectOnSphere(meshfile=sp_mesh_file, dataset=dataset, normalize=True)
+			ProjectOnSphere(meshfile=sp_mesh_file, dataset="modelnet40", normalize=True)
 		]
 	), sp_mesh_dir=sp_mesh_dir, sp_mesh_level=sp_mesh_level)
 
-	dir = os.path.join(data_dir, f"modelnet40_{partition}")
+	dir = os.path.join(data_dir, f"modelnet40_{partition}")  # dir of data files
 	files = os.listdir(dir)
 	files = [f for f in files if ".off" in f]
 	for f in files:
 		try:
 			transform( os.path.join(dir, f) )
 		except:
+			# print failed files to stdout (sometimes due to OOM)
 			print(f)
 
 
 def aggregate_dataset(data_dir, partition):
+	"""Aggregate preprocessed .npy files into numpy array.
+
+	Args:
+		data_dir (str): Root directory of ModelNet40 data files.
+		partition (str): Either "train" or "test" split.
+	"""
+	# 40 class labels
 	classes = ['airplane', 'bowl', 'desk', 'keyboard', 'person', 'sofa', 'tv_stand', 'bathtub', 'car', 'door', 
 		'lamp', 'piano', 'stairs', 'vase', 'bed', 'chair', 'dresser', 'laptop', 'plant', 'stool', 
 		'wardrobe', 'bench', 'cone', 'flower_pot', 'mantel', 'radio', 'table', 'xbox', 'bookshelf', 'cup', 
 		'glass_box', 'monitor', 'range_hood', 'tent', 'bottle', 'curtain', 'guitar', 'night_stand', 'sink', 'toilet']
 
-	dir = os.path.join(data_dir, f"modelnet40_{partition}")
+	dir = os.path.join(data_dir, f"modelnet40_{partition}")  # dir of data files
 	files = [f for f in os.listdir(dir) if "sp2_" in f]
 
 	x, y = [], []
 	for f in files:
-		label = "_".join(f.split("_")[1:-1])
+		label = "_".join(f.split("_")[1:-1])  # extract from filename
 		y.append( classes.index(label) )
 		x.append( np.load(os.path.join(dir, f)) )
 
+	# build arrays
 	x = np.stack(x, 0)
 	y = np.array(y)
 	return x, y
@@ -256,7 +284,7 @@ def aggregate_dataset(data_dir, partition):
 if __name__ == "__main__":
 	import gdnn
 
-	level = 2
+	level = 2  # resolution
 	partitions = ["train", "test"]
 
 	print("Preprocessing data . . . ")
@@ -270,9 +298,11 @@ if __name__ == "__main__":
 	for partition in partitions:
 		dataset[f"x_{partition}"], dataset[f"y_{partition}"] = aggregate_dataset(data_dir, partition)
 
+	# write processed data to disk
 	data_dir = "data"
 	np.savez(os.path.join(data_dir, "dataset.npz"), **dataset)
 
+	# construct and save icosahedral symmetry group
 	print("Saving icosahedral group generators . . . ")
 	generators = gdnn.icosahedron.generators("mesh_files", level=level)
 	with open(os.path.join(data_dir, "generators.pkl"), "wb") as f:

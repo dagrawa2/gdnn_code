@@ -1,3 +1,5 @@
+"""Generate table of results."""
+
 import os
 import json
 import itertools
@@ -5,10 +7,13 @@ import numpy as np
 
 
 def get_stats(architecture, seeds=24):
+	"""Get mean and std of loss and accuracy over all seeds."""
 	dirname = f"results/{architecture}"
 	D = {}
+	# endpoint refers to either before or after training
 	for (split, metric, endpoint) in itertools.product(["train", "val"], ["loss", "accuracy"], ["i", "f"]):
 		D[f"{split}_{metric}_{endpoint}"] = []
+	# gather results over seeds
 	for seed in range(seeds):
 		with open(os.path.join(dirname, f"seed{seed:d}/results.json"), "r") as f:
 			results = json.load(f)["train"]
@@ -22,6 +27,7 @@ def get_stats(architecture, seeds=24):
 
 
 def build_table(architectures, metric, filename, seeds=24):
+	"""Write LaTeX table of results."""
 	with open(filename, "w") as f:
 		f.write("\\begin{tabular}{ccccc}\n")
 		f.write("\\toprule\n")

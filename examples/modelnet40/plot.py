@@ -1,3 +1,5 @@
+"""Plotting script."""
+
 import os
 import json
 import itertools
@@ -16,6 +18,7 @@ figsize = plt.rcParams['figure.figsize']
 ### utilities
 
 def y_minmax(means, stds, padding=0.05):
+    """Determine y-axis limits for bar plot."""
     y_min = (means-stds*np.less(means, 0).astype(int)).min()
     y_max = (means+stds*np.greater(means, 0).astype(int)).max()
     y_range = y_max-y_min
@@ -25,6 +28,7 @@ def y_minmax(means, stds, padding=0.05):
 
 
 def bar_width_shifts(n_bars):
+    """Determine bar widths and positions in bar plot."""
     total_width = 0.7
     width = total_width/n_bars
     shifts = np.array([-total_width/2 + total_width/(2*n_bars)*(2*m+1) for m in range(n_bars)])
@@ -32,17 +36,19 @@ def bar_width_shifts(n_bars):
 
 
 def bar_yerrs(ys, errs):
+    """Determine if error bars in bar plot should be above or below bars."""
     yerrs = []
     for (y, err) in zip(ys, errs):
         if y >= 0:
-            yerrs.append([0, err])
+            yerrs.append([0, err])  # error above bar
         else:
-            yerrs.append([err, 0])
+            yerrs.append([err, 0])  # error below bar
     yerrs = np.array(yerrs).T
     return yerrs
 
 
 def get_unique_legend_handles_labels(fig):
+    """Get unique handles to labels in figure object."""
     tuples = [(h, l) for ax in fig.get_axes() for (h, l) in zip(*ax.get_legend_handles_labels())]
     handles, labels = zip(*tuples)
     unique = [(h, l) for (i, (h, l)) in enumerate(zip(handles, labels)) if l not in labels[:i]]
@@ -53,8 +59,9 @@ def get_unique_legend_handles_labels(fig):
 ### gather scores
 
 def gather_acc(output_dir, num_seeds=None):
+	"""Gather accuracy scores across seeds."""
 	if num_seeds is None:
-		num_seeds = len(list(filter(lambda x: "seed" in x, os.listdir(output_dir))))
+		num_seeds = len(list(filter(lambda x: "seed" in x, os.listdir(output_dir))))  # all seeds
 
 	accuracies = []
 	losses = []
@@ -63,6 +70,7 @@ def gather_acc(output_dir, num_seeds=None):
 	train_loss = []
 	val_loss = []
 	val_acc = []
+	# collect metrics
 	for seed in range(num_seeds):
 		with open(os.path.join(output_dir, f"seed{seed:d}/results.json"), "r") as f:
 			D = json.load(f)
@@ -83,6 +91,7 @@ def gather_acc(output_dir, num_seeds=None):
 	val_loss = np.array(val_loss)
 	val_acc = 100*np.array(val_acc)
 
+	# reduce
 	train_loss_mean = train_loss.mean(0)
 	train_loss_std = train_loss.std(0)
 	val_loss_mean = val_loss.mean(0)
@@ -90,6 +99,7 @@ def gather_acc(output_dir, num_seeds=None):
 	val_acc_mean = val_acc.mean(0)
 	val_acc_std = val_acc.std(0)
 
+	# write metrics
 	os.makedirs(os.path.join(output_dir, "gathered"), exist_ok=True)
 	with open(os.path.join(output_dir, "gathered/score.txt"), "w") as f:
 		f.write(f"accuracy: {accuracies.mean():.1f} +- {accuracies.std():.1f}\n")
@@ -97,16 +107,19 @@ def gather_acc(output_dir, num_seeds=None):
 		f.write(f"epoch: {epochs.mean():.1f} +- {epochs.std():.1f}\n")
 		f.write(f"time: {times.mean():.1f} +- {times.std():.1f}\n")
 
+	# write training loss
 	with open(os.path.join(output_dir, "gathered/train_loss.txt"), "w") as f:
 		f.write("epoch,train_loss_mean,train_loss_std\n")
 		for (i, (m, s)) in enumerate(zip(train_loss_mean, train_loss_std), start=1):
 			f.write(f"{i:d},{m:.3f},{s:.3f}\n")
 
+	# write validation loss
 	with open(os.path.join(output_dir, "gathered/val_loss.txt"), "w") as f:
 		f.write("epoch,val_loss_mean,val_loss_std\n")
 		for (i, (m, s)) in enumerate(zip(val_loss_mean, val_loss_std), start=1):
 			f.write(f"{i:d},{m:.3f},{s:.3f}\n")
 
+	# write validation accuracy
 	with open(os.path.join(output_dir, "gathered/val_acc.txt"), "w") as f:
 		f.write("epoch,val_acc_mean,val_acc_std\n")
 		for (i, (m, s)) in enumerate(zip(val_acc_mean, val_acc_std), start=1):
@@ -116,7 +129,8 @@ def gather_acc(output_dir, num_seeds=None):
 
 
 def gather_scores(results_dir, Ns, architectures):
-	D = {"N": np.array(Ns, dtype=int)}
+	"""Gather metrics for various architectures and training data sizes."""
+	D = {"N": np.array(Ns, dtype=int)}  # init dict
 	for architecture in architectures:
 		D[f"{architecture}_mean"] = []
 		D[f"{architecture}_std"] = []
@@ -131,6 +145,7 @@ def gather_scores(results_dir, Ns, architectures):
 	for (architecture, stat) in itertools.product(architectures, ["mean", "std"]):
 		D[f"{architecture}_{stat}"] = np.array(D[f"{architecture}_{stat}"], dtype=float)
 		headers.append(f"{architecture}_{stat}")
+	# convert dict to pandas dataframe
 	df = pd.DataFrame.from_dict(D)[headers]
 	return df
 
@@ -138,6 +153,7 @@ def gather_scores(results_dir, Ns, architectures):
 ### plot scores
 
 def subplot_scores(results_dir, Ns, architectures, labels, colors, title=None):
+	"""Bar graph of scores across architectures and training data sizes."""
 	data = gather_scores(results_dir, Ns, architectures)
 	all_means = np.concatenate([getattr(data, f"{architecture}_mean").values for architecture in architectures], 0)
 	all_stds = np.concatenate([getattr(data, f"{architecture}_std").values for architecture in architectures], 0)
@@ -155,6 +171,7 @@ def subplot_scores(results_dir, Ns, architectures, labels, colors, title=None):
 
 
 def plot_scores(results_dir, Ns, architectures, labels, colors):
+	"""Bar graph of scores across architectures and training data sizes. Wraps around subplot_scores."""
 	plt.figure(figsize=(figsize[0],figsize[0]))
 	plt.subplot(1, 1, 1)
 	subplot_scores(results_dir, Ns, architectures, labels, colors, title=None)
@@ -168,7 +185,7 @@ def plot_scores(results_dir, Ns, architectures, labels, colors):
 
 if __name__ == "__main__":
 	results_dir = "results"
-	Ns = [25, 50, 75, 100]
+	Ns = [25, 50, 75, 100]  # training subsampling percentages
 	architectures = ["type1", "mixed", "unraveled"]
 
 	labels = ["Type 1", "Mixed", "Unraveled"]

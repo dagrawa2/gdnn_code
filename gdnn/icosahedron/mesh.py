@@ -1,3 +1,5 @@
+"""Generate spherical meshes. Obtained from the project: https://github.com/maxjiang93/ugscnn"""
+
 from .mesh_utils import *
 import scipy.sparse as sparse
 import igl
