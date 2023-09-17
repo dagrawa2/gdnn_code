@@ -30,7 +30,7 @@ class BatchNormFlattened(nn.BatchNorm1d):
 	def forward(self, X):
 		"""Forward pass.
 
-		The input is reshaped to expose its channel dimensions, along which batchnorm is broadcasted, 
+		The input is reshaped to expose its channel dimensions, along which batchnorm is applied independently, 
 		after which the output is reflattened.
 
 		Args:
@@ -218,7 +218,7 @@ class GDNN(nn.Module):
 			load_reps (str): Load precomputed reps from this location.
 			load_patterns (str): Load weightsharing patterns from this location.
 			save_patterns (str): Save weightsharing patterns to this location.
-
+		"""
 		super(GDNN, self).__init__()
 		self.generator_names, self.generators, self.generator_reps = list(zip(*generators))
 		self.in_channels, self.out_channels, self.subgroup_idxs = list(zip(*channels))
