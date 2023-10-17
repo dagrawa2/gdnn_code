@@ -4,7 +4,7 @@ Devanshu Agrawal & James Ostrowski
 
 ### Description
 
-This subrepository includes code and scripts to reproduce the results in Section 4.2 of the associated paper.
+This subrepository includes code and scripts to reproduce the results in Section 4.3 of the associated paper.
 
 
 ### Requirements

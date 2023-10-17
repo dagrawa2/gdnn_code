@@ -1,23 +1,24 @@
 [![Paper](https://img.shields.io/badge/paper-arXiv%3A2303.04614-B31B1B.svg)](https://arxiv.org/abs/2303.04614)
 
-# Densely Connected G-Invariant Deep Neural Networks with Signed Permutation Representations
+# Densely Connected *G*-Invariant Deep Neural Networks with Signed Permutation Representations
 Devanshu Agrawal & James Ostrowski
 [arXiv:2303.04614](https://arxiv.org/abs/2303.04614)
 
 ### Abstract
 
-We introduce and investigate, for finite groups G, G-invariant deep neural network (G-DNN) architectures with ReLU activation that are densely connected-- 
+We introduce and investigate, for finite groups *G*, *G*-invariant deep neural network (*G*-DNN) architectures with ReLU activation that are densely connected-- 
 i.e., include all possible skip connections. 
-In contrast to other G-invariant architectures in the literature, the preactivations of theG-DNNs presented here are able to transform by *signed* permutation representations (signed perm-reps) of G. 
-Moreover, the individual layers of the G-DNNs are not required to be G-equivariant; 
-instead, the preactivations are constrained to be G-equivariant functions of the network input in a way that couples weights across all layers. 
-The result is a richer family of G-invariant architectures never seen previously. 
-We derive an efficient implementation of G-DNNs after a reparameterization of weights, 
+In contrast to other *G*-invariant architectures in the literature, the preactivations of the*G*-DNNs presented here are able to transform by *signed* permutation representations (signed perm-reps) of G. 
+Moreover, the individual layers of the *G*-DNNs are not required to be *G*-equivariant; 
+instead, the preactivations are constrained to be *G*-equivariant functions of the network input in a way that couples weights across all layers. 
+The result is a richer family of *G*-invariant architectures never seen previously. 
+We derive an efficient implementation of *G*-DNNs after a reparameterization of weights, 
 as well as necessary and sufficient conditions for an architecture to be "admissible"-- 
 i.e., nondegenerate and inequivalent to smaller architectures. 
-We include code that allows a user to build a G-DNN interactively layer-by-layer, 
+We include code that allows a user to build a *G*-DNN interactively layer-by-layer, 
 with the final architecture guaranteed to be admissible. 
-Finally, we apply G-DNNs to two example problems -- 
+We show that there are far more admissible $G$-DNN architectures than those accessible with the "concatenated ReLU" activation function from the literature. 
+Finally, we apply *G*-DNNs to two example problems -- 
 (1) multiplication in \{-1, 1\} (with theoretical guarantees) and (2) 3D object classification -- 
 finding that the inclusion of signed perm-reps significantly boosts predictive performance compared to baselines with only ordinary (i.e., unsigned) perm-reps.
 
@@ -50,10 +51,10 @@ To download and install the GDNN module, run the following:
 
 ### Reproducing results
 
-To reproduce Table 1 in the paper, run the following:
+To reproduce Tables 1-3 in the paper, run the following:
 
     python admissible_architectures.py
 
-The LaTeX source for Table 1 will be written to `admissible_architectures.txt`.
+The output tables will be written to the directory `architecture_count`.
 
 To reproduce the results in Section 4 of the paper, see the respective README files of the [binary multiplication](examples/binary_mul/README.md) and [3D object classification](examples/modelnet40/README.md) examples.

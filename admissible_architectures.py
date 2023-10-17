@@ -8,7 +8,7 @@ import gdnn
 from gdnn.gapfunctions import *
 
 
-def count_admissible_architectures(generators):
+def count_admissible_architectures(generators, crelu=False):
 	"""Count of admissible GDNN architectures with strictly decreasing subgroup indexes. See associated paper for results and details.
 
 	Args:
@@ -16,6 +16,7 @@ def count_admissible_architectures(generators):
 			* generator_name (str) is the generator name, 
 			* generator (list) is the permutation list defining the generator, 
 			* generator_rep (list) is the permutation list defining its action via a rep.
+		crelu (bool): True if we are counting CReLU architectures.
 
 	Returns:
 		Dict of architecture counts at each depth.
@@ -31,6 +32,10 @@ def count_admissible_architectures(generators):
 	for (H, K) in subgroup_pairs.HKs():
 		for J in subgroup_pairs.Hs():
 			theta_table[(H, K, J)] = theta(G, H, K, J)
+		if crelu:
+			for J in subgroup_pairs.Ks():
+				if (H, K, J) not in theta_table:
+					theta_table[(H, K, J)] = theta(G, H, K, J)
 
 	# init stabilizer subgroups defining input rep
 	Gamma = group_from_generators(generator_reps)
@@ -57,9 +62,13 @@ def count_admissible_architectures(generators):
 			D[f"depth_{len(idx_chain):d}"]["architectures"] += 1  # update count
 			admissible = True
 			for (l, (H, K)) in enumerate(reps):
+				if crelu:  # no skip connections with CReLU
+					stabilizer_rep = stabilizers[(H, K)] if l == 0 \
+						else theta_table[(H, K, reps[l-1][1])]
+				else:
 				# update stabilizer subgroups
-				Js = [reps[i][0] for i in range(l)]
-				stabilizer_rep = gap.Intersection([stabilizers[(H, K)]] + [theta_table[(H, K, J)] for J in Js])
+					Js = [reps[i][0] for i in range(l)]
+					stabilizer_rep = gap.Intersection([stabilizers[(H, K)]] + [theta_table[(H, K, J)] for J in Js])
 				if stabilizer_rep != K:  # admissibility condition
 					admissible = False
 					break
@@ -69,19 +78,23 @@ def count_admissible_architectures(generators):
 	return D
 
 
-def build_table(groups, headers, filename="admissible_architectures.txt"):
+def build_table(groups, headers, filename="admissible_architectures.txt", crelu=False):
 	"""Write LaTeX table of architecture counts.
 
 	Args:
 		groups (list): List of groups (str) for which to perform count.
 		headers (list): Column headers (str) as names of the groups.
 		filename (str): Write output to this location.
+		crelu (bool): True if we are counting CReLU architectures.
 	"""
 	Ds = []
 	for group in groups:
-		generators = gdnn.groups.group(group)
-		generators = [(name, g, g) for (name, g) in generators]  # expected input format
-		Ds.append( count_admissible_architectures(generators) )
+		if group == "icosahedron":
+			generators = gdnn.icosahedron.generators("examples/modelnet40/mesh_files", level=2)
+		else:
+			generators = gdnn.groups.group(group)
+			generators = [(name, g, g) for (name, g) in generators]  # expected input format
+		Ds.append( count_admissible_architectures(generators, crelu=crelu) )
 
 	max_depth = max([D_depth["depth"] for D in Ds for (key, D_depth) in D.items()])
 	n_cols = len(groups) + 1
@@ -103,9 +116,21 @@ def build_table(groups, headers, filename="admissible_architectures.txt"):
 
 
 if __name__ == "__main__":
+	import os
+	os.makedirs("architecture_count", exist_ok=True)  # output dir
+
 	groups = ["C_8", "C_2xC_4", "C_2xC_2xC_2", "D_4", "Q_8"]
 	headers = ["$C_8$", "$C_2\\times C_4$", "$C_2^3$", "$D_4$", "$Q_8$"]
 
-	build_table(groups, headers, filename="admissible_architectures.txt")
+	# tables 1-2
+	build_table(groups, headers, filename="architecture_count/order8.txt")
+	build_table(groups, headers, filename="architecture_count/order8-crelu.txt", crelu=True)
+
+	groups = ["icosahedron"]
+	headers = ["Icosahedron"]
+
+	# table 3
+	build_table(groups, headers, filename="architecture_count/ico.txt")
+	build_table(groups, headers, filename="architecture_count/ico-crelu.txt", crelu=True)
 
 	print("Done!")
